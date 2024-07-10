@@ -151,24 +151,42 @@ def read_docx(filename, path):
     dic["sents"] = []
     non_error_sentences = []
 
-    for paragraph in doc.paragraphs:
-        text=paragraph.text
-        if len(text)<12:
+    paragraphs = doc.paragraphs
+    total_paragraphs = len(paragraphs)
+
+    for idx, paragraph in enumerate(paragraphs):
+        text = paragraph.text
+        if len(text) < 12:
             continue
         if re.match(r'^\d', text):
             text = text[4:]  # 只取第5个字符之后的内容
-        full_sentence = f" {text}".strip()
-        response = check_sentence_for_errors(full_sentence)
+
+        # 获取上下文
+        context = []
+        if idx > 1:
+            context.extend([paragraphs[idx - 2].text, paragraphs[idx - 1].text])
+        else:
+            context.extend([paragraphs[i].text for i in range(idx)])
+
+        if idx < total_paragraphs - 2:
+            context.extend([paragraphs[idx + 1].text, paragraphs[idx + 2].text])
+        else:
+            context.extend([paragraphs[i].text for i in range(idx + 1, total_paragraphs)])
+
+        context_text = " ".join(context).strip()
+        full_sentence = f" {context_text}{text}".strip()
+        response = check_sentence_for_errors(full_sentence )
 
         if "是" in response[0]:
             print("++++=" * 30)
             print(text, response)
-            if len(response)==1:
+            if len(response) == 1:
                 continue
 
             parts = re.split(',', response[1])
             for err_sent in parts:
                 dic["sents"].append(err_sent)
+
 
         # sentences = sent_tokenize(paragraph.text)  # 将段落分割成句子
         # for sentence in sentences:
